@@ -17,8 +17,9 @@
             width: 100vw;
             height: 100vh;
             overflow: hidden;
-            background: #1a1a1a;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #121212;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            position: relative;
         }
 
         model-viewer {
@@ -27,63 +28,247 @@
             --poster-color: transparent;
         }
 
-        /* Кнопка запуска AR */
+        /* Кнопка запуска AR (всегда видна на всех устройствах) */
         .ar-button {
-            position: absolute;
-            bottom: 30px;
+            position: fixed;
+            bottom: 32px;
             left: 50%;
             transform: translateX(-50%);
-            background: #e74c3c;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
             color: #ffffff;
             border: none;
-            padding: 14px 28px;
-            font-size: 16px;
+            padding: 16px 32px;
+            font-size: 17px;
             font-weight: 600;
             border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
             cursor: pointer;
-            transition: background 0.2s, transform 0.2s;
+            transition: all 0.25s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            z-index: 100;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .ar-button:hover {
-            background: #c0392b;
             transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.6), 0 4px 10px rgba(0, 0, 0, 0.4);
         }
 
         .ar-button:active {
-            transform: translateX(-50%) scale(0.98);
+            transform: translateX(-50%) scale(0.97);
+        }
+
+        /* Модальное окно для ПК / устройств без прямой поддержки WebXR */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-card {
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 28px 24px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            color: #ffffff;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            position: relative;
+            transform: translateY(20px);
+            transition: transform 0.25s ease;
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: translateY(0);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #aaa;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .modal-card h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .modal-card p {
+            font-size: 14px;
+            color: #b0b0b0;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .qr-wrapper {
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 16px;
+            display: inline-block;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .qr-wrapper img {
+            display: block;
+            width: 190px;
+            height: 190px;
+        }
+
+        .modal-hint {
+            font-size: 12px;
+            color: #888888;
+            margin-bottom: 16px;
+        }
+
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            font-weight: 500;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
         }
     </style>
 </head>
 <body>
 
-    <!-- 
-      src: путь к файлу .glb (Android / браузер)
-      ios-src: путь к файлу .usdz (iOS Quick Look)
-      autoplay: автовоспроизведение анимации (ходьба/idle), если она есть в модели
-      auto-rotate: плавное вращение в 3D-режиме
-    -->
-    <model-viewer src="Zombie.glb"
+    <model-viewer id="zombie-viewer"
+                  src="Zombie.glb"
                   ios-src="Zombie.usdz"
                   alt="3D Модель Зомби"
                   ar
                   ar-modes="webxr scene-viewer quick-look"
+                  ar-scale="auto"
                   camera-controls
+                  touch-action="pan-y"
                   auto-rotate
                   autoplay
                   environment-image="neutral"
                   shadow-intensity="1"
                   shadow-softness="0.8">
 
-        <!-- Кнопка вызова AR режима -->
-        <button slot="ar-button" class="ar-button">
-            <span>🧟 Посмотреть в AR</span>
-        </button>
+        <!-- Скрываем дефолтный слот model-viewer, используем свою кнопку -->
+        <div slot="ar-button" style="display: none;"></div>
 
     </model-viewer>
+
+    <!-- Основная кнопка вызова AR (всегда на экране) -->
+    <button id="custom-ar-button" class="ar-button" type="button">
+        <span>🧟 Посмотреть в AR</span>
+    </button>
+
+    <!-- Модальное окно с QR-кодом для ПК и браузеров без поддержки AR -->
+    <div id="ar-modal" class="modal-overlay">
+        <div class="modal-card">
+            <button id="close-modal" class="modal-close" aria-label="Закрыть">&times;</button>
+            <h2>Дополненная реальность</h2>
+            <p>Режим AR работает на смартфонах. Наведите камеру телефона на QR-код для запуска модели:</p>
+            <div class="qr-wrapper">
+                <img id="qr-code-img" src="" alt="QR-код для AR">
+            </div>
+            <p class="modal-hint">Откроется в Safari (iOS Quick Look) или Chrome (Android WebXR/Scene Viewer)</p>
+            <button id="copy-link-btn" class="copy-btn" type="button">📋 Скопировать ссылку</button>
+        </div>
+    </div>
+
+    <script>
+        const viewer = document.getElementById('zombie-viewer');
+        const arButton = document.getElementById('custom-ar-button');
+        const modal = document.getElementById('ar-modal');
+        const closeModal = document.getElementById('close-modal');
+        const copyBtn = document.getElementById('copy-link-btn');
+        const qrImg = document.getElementById('qr-code-img');
+
+        // Установка актуальной ссылки в QR-код
+        const currentUrl = window.location.href;
+        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(currentUrl);
+
+        function showModal() {
+            modal.classList.add('active');
+        }
+
+        function hideModal() {
+            modal.classList.remove('active');
+        }
+
+        // Обработка нажатия на кнопку "Посмотреть в AR"
+        arButton.addEventListener('click', () => {
+            // Если устройство и браузер поддерживают AR (мобильные Safari / Chrome с ARCore/ARKit)
+            if (viewer && viewer.canActivateAR) {
+                viewer.activateAR();
+            } else {
+                // Если запущен на компьютере или во встроенном вебвью (Telegram/VK)
+                showModal();
+            }
+        });
+
+        closeModal.addEventListener('click', hideModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) hideModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') hideModal();
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(currentUrl);
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ Ссылка скопирована!';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                }, 2000);
+            } catch (err) {
+                prompt('Скопируйте ссылку вручную:', currentUrl);
+            }
+        });
+    </script>
 
 </body>
 </html>
